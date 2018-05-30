@@ -9,6 +9,7 @@ import urllib2
 from datetime import datetime
 from bs4 import BeautifulSoup
 
+
 #### FUNCTIONS 1.0
 
 def validateFilename(filename):
@@ -81,52 +82,46 @@ def convert_mth_strings ( mth_string ):
         mth_string = mth_string.replace(k, v)
     return mth_string
 
+
 #### VARIABLES 1.0
 
-entity_id = "E1821_WCC_gov"
-url = "http://www.worcestershire.gov.uk/info/20024/council_finance/331/payments_to_commercial_suppliers_over_500_and_government_procurement_card_transactions"
+entity_id = "E2431_BDC_gov"
+url = "http://www.blaby.gov.uk/about-the-council/performance-spending/budgets-and-finance/payments-to-suppliers/"
 errors = 0
 data = []
+
 
 #### READ HTML 1.0
 
 html = urllib2.urlopen(url)
 soup = BeautifulSoup(html, 'lxml')
 
-
 #### SCRAPE DATA
 
-block = soup.find('div',{'id':'content'})
-links = block.findAll('a', text=re.compile('View Reports'))
-
+links = soup.find('h3', text=re.compile("Downloads")).find_all_next('a', href=True)
 for link in links:
-    if 'http' not in link['href']:
-        suburl = 'http://www.worcestershire.gov.uk' + link['href']
-    else:
-        suburl = link['href']
-    if 'payments_to_commercial_suppliers_over' in suburl:
-        html2 = urllib2.urlopen(suburl)
-        soup2 = BeautifulSoup(html2, 'lxml')
-        block = soup2.find('ul', {'class':'item-list item-list__rich'})
-        sublinks = block.findAll('a', href=True)
-        for sublink in sublinks:
-            filePageUrl = sublink['href']
-            title = sublink.encode_contents(formatter='html').replace('&nbsp;',' ')
-            title = title.upper().strip()
-            html3 = urllib2.urlopen(filePageUrl)
-            soup3 = BeautifulSoup(html3, 'lxml')
-            block = soup3.find('main',{'class':'main-content'})
-            filelinks = block.findAll('a', href=True)
-            for filelink in filelinks:
-                fileurl = filelink['href']
-                if 'Download' in filelink.text:
-                    csvYr = title.split(' ')[-1]
-                    csvMth = title.split(' ')[-2][:3]
-                    if ' - ' not in title:
-                        csvYr = title.split()[1]
-                        csvMth = title.split()[0][:3]
-                    csvMth = convert_mth_strings(csvMth)
-                    data.append([csvYr, csvMth, fileurl])
+    link_class = ''
+    try:
+        link_class = link['class']
+    except:
+        pass
+    link_title = ''
+    try:
+        link_title = link['title']
+    except:
+        pass
+    if '.csv' in link_title or 'oLinkAssetXls' in link_class:
+        if 'http' not in link['href']:
+            url = 'http://www.blaby.gov.uk'+link['href']
+        else:
+            url = link['href']
+        file_name = link.text.strip()
+        if file_name:
+            csvYr = file_name[-4:]
+            csvMth = file_name.split()[-2][:3]
+            csvMth = convert_mth_strings(csvMth.upper())
+            data.append([csvYr, csvMth, url])
+
 
 #### STORE DATA 1.0
 
